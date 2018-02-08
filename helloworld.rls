@@ -1,0 +1,26 @@
+#First RLS file
+#Example: Hello world
+#Author: petterroea
+
+include "basic-logic-gates.rls";
+
+module Helloworld {
+	input a;
+	input b;
+	input c;
+	
+	internal Or or;
+	
+	or.a = a;
+	or.b = b;
+	
+	internal point v;
+	
+	v = a & b;
+	
+	output orOut;
+	output out;	
+	
+	orOut = or.out;
+	out = v & c;
+}

@@ -1,0 +1,53 @@
+# Basic logic gates
+# Nothing fancy
+# author: petterroea
+
+module And {
+	model 3x3 default !default{
+		["      B B", " T BBBR R", "   TRT   "], a = [2, 1, 2], b = [0, 1, 2], out = [1, 1, 0]
+	}
+	
+	input a;
+	input b;
+	
+	output out;
+	
+	operator & a,b: out;
+}
+
+module Or {
+	model 3x2 default !default {
+		[" R RBR"], a = [0, 0, 1], b = [2, 0, 1], out = [1, 0, 0] 
+	}
+	
+	input a;
+	input b;
+	
+	output out;
+	
+	operator | a,b: out;
+}
+
+module Nor {
+	model 3x2 default !default {
+		[" T RBR"], a = [0, 0, 1], b = [2, 0, 1], out = [1, 0, 0] 
+	}
+	
+	input a;
+	input b;
+	
+	output out;
+	
+	#operator | a,b: out;
+}
+
+module RsNor {
+	model 5x5 default !default {
+	
+	}
+	
+	input enable;
+	input disable;
+	
+	output out;
+}
