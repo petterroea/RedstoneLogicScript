@@ -6,7 +6,7 @@ import com.petterroea.redstonelogicscript.compiler.CompilerException;
 import com.petterroea.redstonelogicscript.compiler.CompilerSettings;
 import com.petterroea.redstonelogicscript.utils.Vector3;
 
-public class Model {
+public class Model extends BlockContainer{
 	
 	private String name;
 	private int xSize, zSize;
@@ -23,6 +23,17 @@ public class Model {
 		for(String floor : payload) {
 			if(floor.length() != xSize*zSize) {
 				throw new CompilerException("Invalid model data size in " + name + ": " + floor.length());
+			}
+		}
+
+		for(String floor : payload) {
+			for(int x = 0; x < xSize; x++) {
+				for(int z = 0; z < zSize; z++) {
+					char currentChar = floor.charAt(x+z*xSize);
+					if(currentChar != ' ') {
+						contents.add(Block.getByChar(currentChar));
+					}
+				}
 			}
 		}
 	}
