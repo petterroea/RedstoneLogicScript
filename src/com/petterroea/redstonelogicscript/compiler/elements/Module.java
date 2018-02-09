@@ -19,7 +19,7 @@ public class Module {
 	private HashMap<String, String> internalValues = new HashMap<String, String>();
 	private HashMap<String, Model> models = new HashMap<String, Model>();
 	private ArrayList<ModuleExpression> expressions = new ArrayList<ModuleExpression>();
-	private ArrayList<OperatorModule> operators = new ArrayList<OperatorModule>();
+	ArrayList<OperatorModule> operators = new ArrayList<OperatorModule>();
 	
 	public Module(String name) {
 		this.name = name;
@@ -62,6 +62,14 @@ public class Module {
 	
 	public String getName() {
 		return name;
+	}
+	
+	public boolean containsModel(String modelName) {
+		return models.containsKey(modelName);
+	}
+	
+	public void addModel(String name, Model model) {
+		this.models.put(name, model);
 	}
 	
 	public void validateExpressions(com.petterroea.redstonelogicscript.compiler.Compiler compiler) {
@@ -158,214 +166,4 @@ public class Module {
 			}
 		}
 	}
-	
-	public static Module parse(StringCursor cursor, String moduleName) {
-		Module module = new Module(moduleName);
-		cursor.skipSpacesAndNewlines();
-		
-		cursor.expectChar('{');
-		
-		cursor.skipSpacesAndNewlines();
-		while(cursor.peekChar() != '}') {
-			cursor.skipSpacesAndNewlines();
-			String word = cursor.readUntilNotAlphanumeretic();
-			switch(word) {
-			case "input":
-				cursor.expectChar(' ');
-				
-				String name = cursor.readUntilNotAlphanumeretic();
-				ConnectionPoint cp = new ConnectionPoint(name, ConnectionPointType.IN, module);
-				module.addConnectionPoint(name, cp);
-				
-				cursor.expectChar(';');
-				break;
-			case "output":
-				cursor.expectChar(' ');
-				
-				name = cursor.readUntilNotAlphanumeretic();
-				
-				cursor.skipSpacesAndNewlines();
-				
-				if(cursor.peekChar() == '!') {
-					
-				} else {
-					cursor.expectChar(';');
-				}
-				
-				cp = new ConnectionPoint(name, ConnectionPointType.OUT, module);
-				module.addConnectionPoint(name, cp);
-				break;
-			case "bidirectional":
-				cursor.expectChar(' ');
-				
-				name = cursor.readUntilNotAlphanumeretic();
-				cp = new ConnectionPoint(name, ConnectionPointType.BIDIRECTIONAL, module);
-				module.addConnectionPoint(name, cp);
-				
-				cursor.expectChar(';');
-				break;
-			case "internal":
-				cursor.expectChar(' ');
-				
-				String internalType = cursor.readUntilNotAlphanumeretic();
-				cursor.expectChar(' ');
-				name = cursor.readUntilNotAlphanumeretic();
-				
-				module.addInternalValue(name, internalType);
-				
-				cursor.expectChar(';');
-				break;
-			case "model":
-				parseModel(module, cursor, moduleName);
-				break;
-			case "operator":
-				cursor.skipSpacesAndNewlines();		
-
-				String op = cursor.readUntil(' ');
-				cursor.readChar();
-				String leftSide = cursor.readUntilNotAlphanumeretic();
-				cursor.skipSpacesAndNewlines();
-				cursor.expectChar(',');
-				cursor.skipSpacesAndNewlines();
-				String rightSide = cursor.readUntilNotAlphanumeretic();
-				cursor.skipSpacesAndNewlines();
-				cursor.expectChar(':');
-				cursor.skipSpacesAndNewlines();
-				String result = cursor.readUntilNotAlphanumeretic();
-				cursor.expectChar(';');
-				
-				if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					System.out.println("Registered operator " + leftSide + " " + op + " " + rightSide + " -> " + result);
-				
-				OperatorModule opModule = new OperatorModule(op, module, leftSide, rightSide, result, CompilerState.state.getCurrentFile(), CompilerState.state.getLineNumber());
-				module.operators.add(opModule);
-				CompilerState.state.RegisterOperator(op, opModule);
-				
-				
-				break;
-			default:
-				//It's an operation
-				leftSide = word+cursor.readUntil('=');
-				cursor.readChar();
-				cursor.skipSpacesAndNewlines();
-				rightSide = cursor.readUntil(';');
-				cursor.readChar();
-				if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					System.out.println("Connecting " + leftSide + " to " + rightSide);
-				ModuleExpression exp = new ModuleExpression(leftSide, rightSide, CompilerState.state.getLineNumber(), CompilerState.state.getCurrentFile());
-				module.addExpression(exp);
-			}
-			cursor.skipSpacesAndNewlines();
-		}
-		cursor.readChar();
-		if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			System.out.println("Done parsing module " + module.name);
-		return module;
-	}
-	
-	private static void parseModel(Module module, StringCursor cursor, String moduleName) {
-		cursor.expectChar(' ');
-		
-		//Read size
-		String size = cursor.readUntilNotAlphanumeretic();
-		if(!size.contains("x")) {
-			throw new CompilerException("Malformed model dimension: " + size);
-		}
-		String[] dimensions = size.split("x");
-		if(dimensions.length != 2) {
-			throw new CompilerException("Model size expects 2 dimensions, not " + dimensions.length);
-		}
-		int xSize;
-		int zSize;
-		
-		try {
-			xSize = Integer.parseInt(dimensions[0]);
-			zSize = Integer.parseInt(dimensions[1]);
-		} catch(Exception e) {
-			throw new CompilerException("Invalid model size parameter");
-		}
-		
-		cursor.expectChar(' ');
-		
-		//Read name
-		String modelName = cursor.readUntilNotAlphanumeretic();
-		
-		if(module.models.containsKey(modelName)) {
-			throw new CompilerException("Model " + modelName + " is already defined for module " + moduleName);
-		}
-		
-		Model model = new Model(modelName, xSize, zSize);
-		
-		cursor.expectChar(' ');
-		
-		//Read flags
-		boolean defaultModel = false;
-		if(cursor.peekChar() == '!') {
-			cursor.readChar();
-			String flag = cursor.readUntilNotAlphanumeretic();
-			if(flag.equals("default")) {
-				defaultModel = true;
-			} else {
-				throw new CompilerException("Invalid model flag " + flag);
-			}
-		}
-		
-		//Read data
-		cursor.skipSpacesAndNewlines();
-		cursor.expectChar('{');
-		cursor.skipSpacesAndNewlines();
-		String modelPayload = null;
-		while(cursor.peekChar() != '}') {
-			if(cursor.peekChar() == '[') {
-				if(modelPayload != null) {
-					throw new CompilerException("Model " + modelName + " already has a payload (module " + moduleName + ")");
-				}
-				cursor.readChar();
-				modelPayload = cursor.readUntil(']');
-				if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					System.out.println("Model payload for model " + modelName + ": " + modelPayload);
-				
-				String[] floors = modelPayload.split(",");
-				
-				//Remove string markers
-				for(int i = 0; i < floors.length; i++) {
-					floors[i] = floors[i].substring(floors[i].indexOf("\"")+1, floors[i].lastIndexOf("\""));
-				}
-				
-				model.compilePayload(floors);
-				cursor.readChar();
-			} else if(cursor.peekChar() == ',') {
-				cursor.readChar();
-				cursor.skipSpacesAndNewlines();
-				continue;
-			} else {
-				String pointName = cursor.readUntilNotAlphanumeretic();
-				
-				cursor.skipSpacesAndNewlines();
-				cursor.expectChar('=');
-				cursor.skipSpacesAndNewlines();
-				
-				cursor.expectChar('[');
-				String location = cursor.readUntil(']');
-				if(location.split(",").length != 3) {
-					throw new CompilerException("Invalid format on point assignment vector");
-				}
-				String[] axes = location.split(",");
-				
-				Vector3 assignmentLocation = null;
-				try {
-					assignmentLocation = new Vector3(Integer.parseInt(axes[0].trim()), Integer.parseInt(axes[1].trim()), Integer.parseInt(axes[2].trim()));
-				} catch(Exception e) {
-					throw new CompilerException("Invalid format on point assignment vector");
-				}
-				cursor.expectChar(']');
-				model.addAssignment(pointName, assignmentLocation);
-			}
-			cursor.skipSpacesAndNewlines();
-		}
-		cursor.readChar();
-		if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			System.out.println("Done parsing model " + modelName);
-	}
-
 }

@@ -2,6 +2,7 @@ package com.petterroea.redstonelogicscript.compiler;
 
 import java.util.HashMap;
 
+import com.petterroea.redstonelogicscript.compiler.elements.Module;
 import com.petterroea.redstonelogicscript.compiler.elements.OperatorModule;
 
 //Its a singleton
@@ -9,6 +10,7 @@ public class CompilerState {
 	private String currentFile = "<no file>";
 	private String currentModule = "<no module>";
 	private int lineNumber = 0;
+	private Module initModule;
 	
 	private HashMap<String, OperatorModule> operators = new HashMap<String, OperatorModule>();
 	
@@ -50,6 +52,14 @@ public class CompilerState {
 	
 	public OperatorModule getOperator(String name) {
 		return operators.get(name);
+	}
+
+	public Module getInitModule() {
+		return initModule;
+	}
+	
+	public void setInitModule(Module module) {
+		this.initModule = module;
 	}
 	
 }

@@ -5,16 +5,18 @@ import com.petterroea.redstonelogicscript.utils.Vector3;
 
 public class Block implements BlockProvider{
 	private Vector3 position;
+	private byte metadata;
 	
-	public Block(Vector3 position) {
+	public Block(Vector3 position, byte metadata) {
 		this.position = position;
+		this.metadata = metadata;
 	}
 	
 	public int getMinecraftId() {
 		throw new RuntimeException("GetMinecraftId not implemented");
 	}
-	public int getMetadata() {
-		throw new RuntimeException("getMetadata not implemented");
+	public byte getMetadata() {
+		return metadata;
 	}
 	@Override
 	public boolean doesCollide(Vector3 coord) {
@@ -26,18 +28,17 @@ public class Block implements BlockProvider{
 		return false;
 	}
 
-	public static Block getByChar(char currentChar) {
+	public static Block getByChar(Vector3 position, char currentChar, byte metadata) {
 		switch(currentChar) {
 		case 'T':
-			break;
+			return new TorchBlock(position, metadata);
 		case 'B':
-			break;
+			return new StructureBlock(position, metadata);
 		case 'R':
-			break;
+			return new CircuitBlock(position, metadata);
 		default:
 			throw new CompilerException("Invalid char used in model: " + currentChar);
 		}
-		return null;
 	}
 
 }

@@ -17,6 +17,11 @@ public class Model extends BlockContainer{
 		this.xSize = xSize;
 		this.zSize = zSize;
 	}
+	
+	public String getName() {
+		return name;
+	}
+	
 	public void compilePayload(String[] payload) {
 		if(CompilerSettings.settingsSingleton.getVerboseFlag())
 			System.out.println("Compiling model payload for model " + name);
@@ -26,12 +31,13 @@ public class Model extends BlockContainer{
 			}
 		}
 
-		for(String floor : payload) {
+		for(int y = 0; y < payload.length; y++) {
+			String floor = payload[y];
 			for(int x = 0; x < xSize; x++) {
 				for(int z = 0; z < zSize; z++) {
 					char currentChar = floor.charAt(x+z*xSize);
 					if(currentChar != ' ') {
-						contents.add(Block.getByChar(currentChar));
+						contents.add(Block.getByChar(new Vector3(x, y, z), currentChar, (byte)0)); //TODO metadata
 					}
 				}
 			}

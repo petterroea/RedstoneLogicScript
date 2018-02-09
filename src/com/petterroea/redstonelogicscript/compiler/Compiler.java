@@ -11,6 +11,8 @@ import javax.management.RuntimeErrorException;
 
 import com.petterroea.redstonelogicscript.compiler.CompilerSettings.CompilerMode;
 import com.petterroea.redstonelogicscript.compiler.elements.Module;
+import com.petterroea.redstonelogicscript.compiler.elements.ModuleParser;
+import com.petterroea.redstonelogicscript.minecraft.ModuleContainer;
 
 public class Compiler {
 	
@@ -26,7 +28,7 @@ public class Compiler {
 		this.destination = destFile;
 	}
 	
-	public void parseFile(String filename) {
+	public void parseFile(String filename, boolean isMainFile) {
 		System.out.println("Parsing " + filename);
 		
 		File file = settings.findLibraryInIncludePath(filename);
@@ -49,7 +51,25 @@ public class Compiler {
 				if(modules.containsKey(moduleName)) {
 					throw new CompilerException("Module " + moduleName + " is already defined");
 				}
-				modules.put(moduleName, Module.parse(cursor, moduleName));
+				cursor.skipSpaces();
+				boolean isMain = false;
+				if(cursor.peekChar() == '!') {
+					cursor.readChar();
+					String flag = cursor.readUntilNotAlphanumeretic();
+					
+					if(!flag.equals("main")) {
+						throw new CompilerException("Unknown module flag " + flag);
+					}
+					isMain = true;
+				}
+				
+				Module module = ModuleParser.parseModule(cursor, moduleName);
+				
+				if(isMain) {
+					CompilerState.state.setInitModule(module);
+				}
+				
+				modules.put(moduleName, module);
 				break;
 			case "include":
 				cursor.expectChar(' ');
@@ -58,7 +78,7 @@ public class Compiler {
 				cursor.expectChar('"');
 				if(!includedFiles.contains(name)) {
 					System.out.println("Importing " + name);
-					parseFile(name);
+					parseFile(name, false);
 				} else {
 					if(settings.getVerboseFlag())
 						System.out.println("Skipping already imported file " + name);
@@ -136,8 +156,14 @@ public class Compiler {
 		}
 		Compiler compiler = new Compiler(settings, destFile);
 		long startTime = System.currentTimeMillis();
-		compiler.parseFile(sourceFile);
+		compiler.parseFile(sourceFile, true);
 		compiler.validateModules();
+		
+		if(CompilerState.state.getInitModule() == null) {
+			throw new CompilerException("No main module defined", "<No file>", 0);
+		}
+		ModuleContainer world = new ModuleContainer(CompilerState.state.getInitModule());
+		world.generateStructures();
 		
 		System.out.println("Finished parsing and validation in " + (System.currentTimeMillis() - startTime) + "ms.");
 	}

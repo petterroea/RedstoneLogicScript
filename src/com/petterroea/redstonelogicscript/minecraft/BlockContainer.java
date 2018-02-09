@@ -6,7 +6,10 @@ import com.petterroea.redstonelogicscript.utils.Vector3;
 
 public class BlockContainer implements BlockProvider{
 	
+	private Vector3 position = new Vector3(0, 0, 0);
+	
 	protected LinkedList<BlockProvider> contents = new LinkedList<BlockProvider>(); 
+	
 
 	@Override
 	public boolean doesCollide(Vector3 coord) {
