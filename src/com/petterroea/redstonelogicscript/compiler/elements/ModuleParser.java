@@ -6,7 +6,7 @@ import com.petterroea.redstonelogicscript.compiler.CompilerState;
 import com.petterroea.redstonelogicscript.compiler.StringCursor;
 import com.petterroea.redstonelogicscript.compiler.elements.ConnectionPoint.ConnectionPointType;
 import com.petterroea.redstonelogicscript.minecraft.Model;
-import com.petterroea.redstonelogicscript.utils.Vector3;
+import com.petterroea.redstonelogicscript.utils.IntegerVector3;
 
 public class ModuleParser {
 	public static Module parseModule(StringCursor cursor, String moduleName) {
@@ -145,8 +145,6 @@ public class ModuleParser {
 			throw new CompilerException("Model " + modelName + " is already defined for module " + moduleName);
 		}
 		
-		Model model = new Model(modelName, xSize, zSize);
-		
 		cursor.expectChar(' ');
 		
 		//Read flags
@@ -160,6 +158,8 @@ public class ModuleParser {
 				throw new CompilerException("Invalid model flag " + flag);
 			}
 		}
+		
+		Model model = new Model(modelName, xSize, zSize, defaultModel);
 		
 		//Read data
 		cursor.skipSpacesAndNewlines();
@@ -203,9 +203,9 @@ public class ModuleParser {
 				}
 				String[] axes = location.split(",");
 				
-				Vector3 assignmentLocation = null;
+				IntegerVector3 assignmentLocation = null;
 				try {
-					assignmentLocation = new Vector3(Integer.parseInt(axes[0].trim()), Integer.parseInt(axes[1].trim()), Integer.parseInt(axes[2].trim()));
+					assignmentLocation = new IntegerVector3(Integer.parseInt(axes[0].trim()), Integer.parseInt(axes[1].trim()), Integer.parseInt(axes[2].trim()));
 				} catch(Exception e) {
 					throw new CompilerException("Invalid format on point assignment vector");
 				}

@@ -60,6 +60,10 @@ public class Compiler {
 					if(!flag.equals("main")) {
 						throw new CompilerException("Unknown module flag " + flag);
 					}
+					
+					if(settings.getVerboseFlag())
+						System.out.println("Module " + moduleName + " is main module");
+					
 					isMain = true;
 				}
 				
@@ -70,6 +74,7 @@ public class Compiler {
 				}
 				
 				modules.put(moduleName, module);
+				
 				break;
 			case "include":
 				cursor.expectChar(' ');
@@ -102,12 +107,27 @@ public class Compiler {
 	        
 	        ((Module)pair.getValue()).validateExpressions(this);
 	        
-	        it.remove(); // avoids a ConcurrentModificationException
+	        //it.remove(); // avoids a ConcurrentModificationException
 	    }
 	}
 	
 	public Module getModule(String name) {
 		return modules.get(name);
+	}
+	
+	public Module[] getModuleList() {
+		Module[] list = new Module[modules.size()];
+		int i = 0;
+		Iterator it = modules.entrySet().iterator();
+	    while (it.hasNext()) {
+	        Map.Entry pair = (Map.Entry)it.next();
+	        
+	        list[i++] = ((Module)pair.getValue());
+	        
+	        //it.remove(); // avoids a ConcurrentModificationException
+	    }
+	    
+	    return list;
 	}
 
 	public static void main(String[] args) {
@@ -163,9 +183,15 @@ public class Compiler {
 			throw new CompilerException("No main module defined", "<No file>", 0);
 		}
 		ModuleContainer world = new ModuleContainer(CompilerState.state.getInitModule());
-		world.generateStructures();
-		
 		System.out.println("Finished parsing and validation in " + (System.currentTimeMillis() - startTime) + "ms.");
+		System.out.println("Compiler contains " + compiler.getModuleList().length + " Modules");
+		
+		long generationStartTime = System.currentTimeMillis();
+		world.generateStructures(compiler);
+		
+		System.out.println("Finished building structures in " + (System.currentTimeMillis() - generationStartTime) + "ms.");
+		
+		
 	}
 	
 	private static void displayHelpAndExit() {

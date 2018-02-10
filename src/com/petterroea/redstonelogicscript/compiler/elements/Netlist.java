@@ -1,25 +1,27 @@
 package com.petterroea.redstonelogicscript.compiler.elements;
 
+import java.util.LinkedList;
+
 import com.petterroea.redstonelogicscript.compiler.CompilerException;
 import com.petterroea.redstonelogicscript.compiler.elements.ConnectionPoint.ConnectionPointType;
 
-public class Connection {
-	private boolean isDirectional = true;
-	private ConnectionPoint a, b;
-	public Connection(ConnectionPoint a, ConnectionPoint b) {
-		this.a = a;
-		this.b = b;
-		a.hook(this);
-		b.hook(this);
-		validateConnection();
+public class Netlist {
+	private LinkedList<String> points = new LinkedList<String>();
+	public Netlist() {
+		
 	}
 	
-	private void validateConnection() {
-		if(a == b) {
-			throw new CompilerException("Point " + a.toString() + " is connected to itself");
-		}
-		if(a.getType() != ConnectionPointType.BIDIRECTIONAL && a.getType() == b.getType()) {
-			throw new CompilerException("Point " + a.toString() + " cannot be connected to " + b.toString());
-		}
+	public void addPoint(String point) {
+		points.add(point);
+	}
+	
+	public boolean hasPoint(String point) {
+		return points.contains(point);
+	}
+	
+	public String[] getPoints() {
+		String[] list = new String[points.size()];
+		list = points.toArray(list);
+		return list;
 	}
 }

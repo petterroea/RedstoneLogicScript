@@ -9,7 +9,7 @@ import com.petterroea.redstonelogicscript.compiler.CompilerState;
 import com.petterroea.redstonelogicscript.compiler.StringCursor;
 import com.petterroea.redstonelogicscript.compiler.elements.ConnectionPoint.ConnectionPointType;
 import com.petterroea.redstonelogicscript.minecraft.Model;
-import com.petterroea.redstonelogicscript.utils.Vector3;
+import com.petterroea.redstonelogicscript.utils.IntegerVector3;
 
 //Some type of object orientation
 public class Module {
@@ -20,6 +20,8 @@ public class Module {
 	private HashMap<String, Model> models = new HashMap<String, Model>();
 	private ArrayList<ModuleExpression> expressions = new ArrayList<ModuleExpression>();
 	ArrayList<OperatorModule> operators = new ArrayList<OperatorModule>();
+	
+	private Model defaultModel = null;
 	
 	public Module(String name) {
 		this.name = name;
@@ -52,6 +54,10 @@ public class Module {
 		internalValues.put(name, type);
 	}
 	
+	public HashMap<String, String> getInternalValues() {
+		return this.internalValues;
+	}
+	
 	public HashMap<String, ConnectionPoint> getPoints() {
 		return points;
 	}
@@ -68,8 +74,28 @@ public class Module {
 		return models.containsKey(modelName);
 	}
 	
+	public boolean hasModels() {
+		return !models.isEmpty();
+	}
+	
+	public ModuleExpression[] getExpressions() {
+		ModuleExpression[] moduleArr = new ModuleExpression[expressions.size()];
+		moduleArr = expressions.toArray(moduleArr);
+		return moduleArr;
+	}
+	
 	public void addModel(String name, Model model) {
+		if(model.getIsDefault()) {
+			if(defaultModel != null) {
+				throw new CompilerException("A default model already exists for this module");
+			}
+			this.defaultModel = model;
+		}
 		this.models.put(name, model);
+	}
+	
+	public Model getDefaultModel() {
+		return defaultModel;
 	}
 	
 	public void validateExpressions(com.petterroea.redstonelogicscript.compiler.Compiler compiler) {
@@ -165,5 +191,10 @@ public class Module {
 				}
 			}
 		}
+	}
+
+	public IntegerVector3 getPointPosition(String pointName) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
