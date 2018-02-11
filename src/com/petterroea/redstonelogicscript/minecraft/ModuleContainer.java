@@ -12,7 +12,6 @@ import com.petterroea.redstonelogicscript.compiler.CompilerSettings;
 import com.petterroea.redstonelogicscript.compiler.CompilerState;
 import com.petterroea.redstonelogicscript.compiler.elements.Module;
 import com.petterroea.redstonelogicscript.compiler.elements.ModuleExpression;
-import com.petterroea.redstonelogicscript.compiler.elements.Netlist;
 import com.petterroea.redstonelogicscript.compiler.elements.OperatorModule;
 import com.petterroea.redstonelogicscript.utils.Rectangle;
 import com.petterroea.redstonelogicscript.utils.DoubleVector3;
@@ -28,9 +27,9 @@ public class ModuleContainer extends BlockContainer {
 	
 	private LinkedList<ModuleContainer> operators = new LinkedList<ModuleContainer>();
 	
-	private HashMap<String, IntegerVector3> connectionPoints = new HashMap<String, IntegerVector3>();
+	HashMap<String, IntegerVector3> connectionPoints = new HashMap<String, IntegerVector3>();
 	
-	private Module module;
+	Module module;
 	
 	public ModuleContainer(Module module) {
 		this.module = module;
@@ -66,7 +65,7 @@ public class ModuleContainer extends BlockContainer {
 					
 					internals.put(name, container);
 				} else {
-					Netlist netlist = new Netlist();
+					Netlist netlist = new Netlist(this);
 					netlists.add(netlist);
 					namedNetlists.put(name, netlist);
 				}
@@ -86,154 +85,190 @@ public class ModuleContainer extends BlockContainer {
 				System.out.println("Netlist for " + module.getName() + " has " + netlists.size() + " entries.");
 			
 			LinkedList<ModuleContainer> placedModules = new LinkedList<ModuleContainer>();
-			int modulePadding = 3;
+			int modulePadding = 5;
 			//Loop until everything is placed
-			while(placedModules.size() < internals.size()) {
-				//Find the biggest part
-				int biggestVolume = 0;
-				ModuleContainer currentModule = null;
-				String currentModuleName = "";
-				
-				Iterator it = internals.entrySet().iterator();
-			    while (it.hasNext()) {
-			        Map.Entry pair = (Map.Entry)it.next();
-			        
-			        ModuleContainer container = (ModuleContainer) pair.getValue();
-			        int volume = container.getBoundingBox().volume();
-			        if(!placedModules.contains(container) && volume > biggestVolume) {
-			        	currentModule = container;
-			        	biggestVolume = volume;
-			        	currentModuleName = (String) pair.getKey();
-			        }
-			        
-			        //it.remove(); // avoids a ConcurrentModificationException
-			    }
-			    //We can't really place any traces if no other modules exist
-			    if(placedModules.size()==0) {
-			    	getBlockList().add(currentModule);
-			    	placedModules.add(currentModule);
-			    	
-			    	it = currentModule.getConnectionPoints().entrySet().iterator();
+			while(true) {
+				while(placedModules.size() < internals.size()) {
+					//Find the biggest part
+					int biggestVolume = 0;
+					ModuleContainer currentModule = null;
+					String currentModuleName = "";
+					
+					Iterator it = internals.entrySet().iterator();
 				    while (it.hasNext()) {
 				        Map.Entry pair = (Map.Entry)it.next();
 				        
-				        connectionPoints.put(currentModuleName + "." + (String)pair.getKey(), (IntegerVector3)pair.getValue());
+				        ModuleContainer container = (ModuleContainer) pair.getValue();
+				        int volume = container.getBoundingBox().volume();
+				        if(!placedModules.contains(container) && volume > biggestVolume) {
+				        	currentModule = container;
+				        	biggestVolume = volume;
+				        	currentModuleName = (String) pair.getKey();
+				        }
+				        
 				        //it.remove(); // avoids a ConcurrentModificationException
 				    }
+				    //We can't really place any traces if no other modules exist
+				    if(placedModules.size()==0) {
+				    	getBlockList().add(currentModule);
+				    	placedModules.add(currentModule);
+				    	
+				    	it = currentModule.getConnectionPoints().entrySet().iterator();
+					    while (it.hasNext()) {
+					        Map.Entry pair = (Map.Entry)it.next();
+					        
+					        connectionPoints.put(currentModuleName + "." + (String)pair.getKey(), (IntegerVector3)pair.getValue());
+					        //it.remove(); // avoids a ConcurrentModificationException
+					    }
+					    if(CompilerSettings.settingsSingleton.getVerboseFlag())
+							System.out.println("Added first module");
+				    	continue;
+				    }
+				    
+				    //Now, accumulate points it is connected to which already exist in the world.
+				    IntegerVector3 accumulatedPoints = new IntegerVector3(0,0,0);
+				    int accumulatedCount = 0;
+				    
+				    it = currentModule.getConnectionPoints().entrySet().iterator();
+				    while (it.hasNext()) {
+				        Map.Entry pair = (Map.Entry)it.next();
+				        
+				        Netlist connectedNet = null;
+				        for(Netlist net : netlists) {
+				        	if(net.hasPoint(currentModuleName + "." + (String)pair.getKey())) {
+				        		connectedNet = net;
+				        		break;
+				        	}
+				        }
+				        
+				        if(connectedNet == null) {
+				        	//This point is not used, so we can safely ignore it.
+				        	continue;
+				        }
+				        
+				        for(String s : connectedNet.getPoints()) {
+				        	if(connectionPoints.containsKey(s)) {
+				        		accumulatedPoints.add(connectionPoints.get(s));
+				        		accumulatedCount++;
+				        	}
+				        }
+				        
+				        //it.remove(); // avoids a ConcurrentModificationException
+				    }
+				    if(accumulatedCount != 0) {
+				    	accumulatedPoints = accumulatedPoints.divide(accumulatedCount);
+				    }
+				    
+				    //Next, find the average direction
+				    IntegerVector3 averageDirection = new IntegerVector3(0,0,0);
+				    int directionCount = 0;
+				    it = currentModule.getConnectionPoints().entrySet().iterator();
+				    while (it.hasNext()) {
+				        Map.Entry pair = (Map.Entry)it.next();
+				        
+				        Netlist connectedNet = null;
+				        for(Netlist net : netlists) {
+				        	if(net.hasPoint(currentModuleName + "." + (String)pair.getKey())) {
+				        		connectedNet = net;
+				        		break;
+				        	}
+				        }
+				        
+				        if(connectedNet == null) {
+				        	//This point is not used, so we can safely ignore it.
+				        	continue;
+				        }
+				        
+				        for(String s : connectedNet.getPoints()) {
+				        	if(connectionPoints.containsKey(s)) {
+				        		averageDirection.add(connectionPoints.get(s).minus(accumulatedPoints));
+				        		directionCount++;
+				        	}
+				        }
+				        
+				        //it.remove(); // avoids a ConcurrentModificationException
+				    }
+				    DoubleVector3 direction = new DoubleVector3(averageDirection).normalize();
+				    DoubleVector3 position = new DoubleVector3(accumulatedPoints);
+				    boolean isRandomDirection = false;
+				    if(directionCount == 0) {
+				    	direction = new DoubleVector3(random.nextDouble(), 0, random.nextDouble()).normalize();
+				    	isRandomDirection = true;
+				    }
+				   
+				    
 				    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-						System.out.println("Added first module");
-			    	continue;
-			    }
-			    
-			    //Now, accumulate points it is connected to which already exist in the world.
-			    IntegerVector3 accumulatedPoints = new IntegerVector3(0,0,0);
-			    int accumulatedCount = 0;
-			    
-			    it = currentModule.getConnectionPoints().entrySet().iterator();
-			    while (it.hasNext()) {
-			        Map.Entry pair = (Map.Entry)it.next();
-			        
-			        Netlist connectedNet = null;
-			        for(Netlist net : netlists) {
-			        	if(net.hasPoint(currentModuleName + "." + (String)pair.getKey())) {
-			        		connectedNet = net;
-			        		break;
-			        	}
-			        }
-			        
-			        if(connectedNet == null) {
-			        	//This point is not used, so we can safely ignore it.
-			        	continue;
-			        }
-			        
-			        for(String s : connectedNet.getPoints()) {
-			        	if(connectionPoints.containsKey(s)) {
-			        		accumulatedPoints.add(connectionPoints.get(s));
-			        		accumulatedCount++;
-			        	}
-			        }
-			        
-			        //it.remove(); // avoids a ConcurrentModificationException
-			    }
-			    if(accumulatedCount != 0) {
-			    	accumulatedPoints = accumulatedPoints.divide(accumulatedCount);
-			    }
-			    
-			    //Next, find the average direction
-			    IntegerVector3 averageDirection = new IntegerVector3(0,0,0);
-			    int directionCount = 0;
-			    it = currentModule.getConnectionPoints().entrySet().iterator();
-			    while (it.hasNext()) {
-			        Map.Entry pair = (Map.Entry)it.next();
-			        
-			        Netlist connectedNet = null;
-			        for(Netlist net : netlists) {
-			        	if(net.hasPoint(currentModuleName + "." + (String)pair.getKey())) {
-			        		connectedNet = net;
-			        		break;
-			        	}
-			        }
-			        
-			        if(connectedNet == null) {
-			        	//This point is not used, so we can safely ignore it.
-			        	continue;
-			        }
-			        
-			        for(String s : connectedNet.getPoints()) {
-			        	if(connectionPoints.containsKey(s)) {
-			        		averageDirection.add(connectionPoints.get(s).minus(accumulatedPoints));
-			        		directionCount++;
-			        	}
-			        }
-			        
-			        //it.remove(); // avoids a ConcurrentModificationException
-			    }
-			    DoubleVector3 direction = new DoubleVector3(averageDirection).normalize();
-			    if(directionCount == 0) {
-			    	direction = new DoubleVector3(random.nextDouble(), random.nextDouble(), random.nextDouble()).normalize();
-			    }
-			    DoubleVector3 position = new DoubleVector3(accumulatedPoints);
-			    
-			    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					System.out.println("Found average placement position for module " + currentModuleName + " in " + module.getName() + ": " + position.toString() + ", direction " + direction.toString());
-			    
-			    //Next, we move as far as we can before colliding
-			    currentModule.setPosition(position.toIntegerVector());
-			    while(!this.doesCollide(currentModule, getPosition())) {
-			    	currentModule.translate(direction.toIntegerVector());
-			    }
-			    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			    	System.out.println("Finished snuggling with closest module");
-			    
-			    currentModule.translate(direction.multiply(-1*modulePadding).toIntegerVector());
-			    
-			    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			    	System.out.println("Translated module for current padding level " + modulePadding + ", position " + currentModule.getPosition().toString());
-			    
-			    while(this.doesCollide(currentModule, getPosition())) {
-			    	if(CompilerSettings.settingsSingleton.getVerboseFlag())
-				    	System.out.println("The padding translation put us in a place which is occupated, translating further: " + currentModule.getPosition().toString());
-			    	IntegerVector3 translationDir = direction.multiply(-1*modulePadding).roundUpIntegerVector();
-			    	if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			    		System.out.println("Translating in direction " + translationDir.toString());
-			    	currentModule.translate(translationDir);
-			    }
-			    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			    	System.out.println("Finished finding a position");
-			    
-			    this.blockList.add(currentModule);
-			    placedModules.add(currentModule);
-			    
-			    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			    	System.out.println("Adding module " + currentModuleName + " at position " + currentModule.getPosition().toString());
-			    
-			    it = currentModule.getConnectionPoints().entrySet().iterator();
-			    while (it.hasNext()) {
-			        Map.Entry pair = (Map.Entry)it.next();
-			        
-			        this.connectionPoints.put(currentModuleName+"."+(String)pair.getKey(), (IntegerVector3)pair.getValue());
-			    }
-			    
+						System.out.println("Found average placement position for module " + currentModuleName + " in " + module.getName() + ": " + position.toString() + ", direction " + direction.toString());
+				    
+				    currentModule.setPosition(position.toIntegerVector());
+				    //Next, we move as far as we can before colliding
+				    if(!isRandomDirection) {
+				    	while(!this.doesCollide(currentModule, getPosition())) {
+					    	currentModule.translate(direction.toIntegerVector());
+					    }
+				    	if(CompilerSettings.settingsSingleton.getVerboseFlag())
+					    	System.out.println("Finished snuggling with closest module");
+				    	
+				    	currentModule.translate(direction.multiply(-1*modulePadding).toIntegerVector());
+					    
+					    if(CompilerSettings.settingsSingleton.getVerboseFlag())
+					    	System.out.println("Translated module for current padding level " + modulePadding + ", position " + currentModule.getPosition().toString());
+					    
+					    while(this.doesCollide(currentModule, getPosition())) {
+					    	if(CompilerSettings.settingsSingleton.getVerboseFlag())
+						    	System.out.println("The padding translation put us in a place which is occupated, translating further: " + currentModule.getPosition().toString());
+					    	IntegerVector3 translationDir = direction.multiply(-1*modulePadding).roundUpIntegerVector();
+					    	if(CompilerSettings.settingsSingleton.getVerboseFlag())
+					    		System.out.println("Translating in direction " + translationDir.toString());
+					    	currentModule.translate(translationDir);
+					    }
+					    if(CompilerSettings.settingsSingleton.getVerboseFlag())
+					    	System.out.println("Finished finding a position");
+				    } else {
+				    	//The net is new, so we just find a position that is legal
+				    	while(this.doesCollide(currentModule, getPosition())) {
+				    		currentModule.translate(direction.multiply(modulePadding).toIntegerVector());
+				    	}
+				    	while(true) {
+				    		for(int i = 0; i < modulePadding; i++) {
+					    		if(this.doesCollide(currentModule, getPosition())) {
+					    			i = 0;
+					    		}
+					    		currentModule.translate(direction.multiply(modulePadding).toIntegerVector());
+					    	}
+					    	boolean safe = true;
+					    	for(int i = 0; i < modulePadding; i++) {
+					    		if(this.doesCollide(currentModule, getPosition())) {
+					    			safe = false;
+					    			break;
+					    		}
+					    		currentModule.translate(direction.multiply(modulePadding).toIntegerVector());
+					    	}
+					    	if(safe) {
+					    		currentModule.translate(direction.multiply(modulePadding*-3).toIntegerVector());
+					    		break;
+					    	}
+				    	}
+				    }
+				    
+				    this.blockList.add(currentModule);
+				    placedModules.add(currentModule);
+				    
+				    if(CompilerSettings.settingsSingleton.getVerboseFlag())
+				    	System.out.println("Adding module " + currentModuleName + " at position " + currentModule.getPosition().toString());
+				    
+				    it = currentModule.getConnectionPoints().entrySet().iterator();
+				    while (it.hasNext()) {
+				        Map.Entry pair = (Map.Entry)it.next();
+				        
+				        this.connectionPoints.put(currentModuleName+"."+(String)pair.getKey(), (IntegerVector3)pair.getValue());
+				    }
+				}
+				//Cable placing time. If all netlists are built successfully, we are golden.
+				for(Netlist currentNetlist : netlists) {
+					currentNetlist.buildNet(this);
+				}
+				
 			}
 			
 			//Disregard the code below
@@ -302,7 +337,7 @@ public class ModuleContainer extends BlockContainer {
 			}
 			if(!foundInNormalNetlist) {
 				//This means that the left side has never been seen in a netlist before. Make a new netlist for it.
-				Netlist net = new Netlist();
+				Netlist net = new Netlist(this);
 				netlists.add(net);
 				net.addPoint(leftSide);
 				if(om == null) {
