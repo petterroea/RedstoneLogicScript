@@ -142,7 +142,7 @@ public class Netlist {
 			netlistPathfindMap[matrixAjusted.getX()][matrixAjusted.getY()][matrixAjusted.getZ()] = -1;
 		} else {
 			short lowestPoint = Short.MAX_VALUE;
-			lowestPoint = netlistPathfindMap[]//TODO
+			lowestPoint = netlistPathfindMap[point.getX()][point.getY()][point.getZ()] < lowestPoint
 		}
 	}
 }
