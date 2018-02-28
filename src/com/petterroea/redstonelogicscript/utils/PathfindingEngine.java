@@ -12,6 +12,7 @@ public class PathfindingEngine {
 	private int sx, sy, sz;
 	private int[][][] pathfindingGrid;
 	private BlockProvider world; 
+	private PathfindingBlockedProvider obstacleProvider;
 	/*
 	 * Allows chance of correct generation to increase by randomizing which path we pick when equal paths are found.
 	 * 
@@ -19,17 +20,18 @@ public class PathfindingEngine {
 	*/
 	private Random rand;
 	
-	public PathfindingEngine(int size, BlockProvider world) {
-		this(size, size, size, world);
+	public PathfindingEngine(int size, BlockProvider world, PathfindingBlockedProvider obstacleProvider) {
+		this(size, size, size, world, obstacleProvider);
 	}
 	
-	public PathfindingEngine(int sx, int sy, int sz, BlockProvider world) {
+	public PathfindingEngine(int sx, int sy, int sz, BlockProvider world, PathfindingBlockedProvider obstacleProvider) {
 		this.sx = sx;
 		this.sy = sy;
 		this.sz = sz;
 		this.world = world;
 		pathfindingGrid = new int[sx*2][sy*2][sz*2];
 		rand = new Random();
+		this.obstacleProvider = obstacleProvider;
 	}
 	
 	public void reuse() {
@@ -62,6 +64,7 @@ public class PathfindingEngine {
 			throw new CompilerException("Tried to pathfind to a point outside bounds, up the bounds maybe?");
 		}
 		
+		setScoreAtPoint(start, 1);
 		doPoint(pointQueue, start);
 		
 		//Build map
@@ -91,7 +94,7 @@ public class PathfindingEngine {
 		
 		for(IntegerVector3 v : IntegerVector3.DIRECTIONS) {
 			IntegerVector3 p = v.add(point);
-			if(!isWithinBounds(v))
+			if(!isWithinBounds(p))
 				continue;
 			if(candidates.size() == 0) {
 				candidates.add(new PointCandidate(p, getScoreAtPoint(p)));
@@ -112,8 +115,12 @@ public class PathfindingEngine {
 		IntegerVector3 matrixPos = p.add(new IntegerVector3(sx, sy, sz));
 		return pathfindingGrid[matrixPos.getX()][matrixPos.getY()][matrixPos.getZ()];
 	}
+	private void setScoreAtPoint(IntegerVector3 p, int score) {
+		IntegerVector3 matrixPos = p.add(new IntegerVector3(sx, sy, sz));
+		pathfindingGrid[matrixPos.getX()][matrixPos.getY()][matrixPos.getZ()] = score;
+	}
 
-	/*
+	/**
 	 * Returns null if the end target is reached, a LinkedList of integerVectors to come if not.
 	 */
 	private LinkedList<IntegerVector3> gridPopulationIteration(LinkedList<IntegerVector3> pointQueue, IntegerVector3 end) {
@@ -129,7 +136,22 @@ public class PathfindingEngine {
 	}
 	
 	private void doPoint(LinkedList<IntegerVector3> pointQueue, IntegerVector3 point) {
-		//TODO add all neighbour points that fit the rules required by a custom callback i need to implement
+		int pointScore = getScoreAtPoint(point);
+		for(IntegerVector3 direction : IntegerVector3.DIRECTIONS) {
+			IntegerVector3 worldPos = direction.add(point);
+			if(!isWithinBounds(worldPos)) {
+				continue;
+			}
+			if(!obstacleProvider.isValidPoint(worldPos, world)) {
+				continue;
+			}
+			int neighborScore = getScoreAtPoint(worldPos);
+			if(neighborScore != 0 && neighborScore < pointScore+1) {
+				continue;
+			}
+			setScoreAtPoint(worldPos, pointScore+1);
+			pointQueue.add(worldPos);
+		}
 	}
 
 }
