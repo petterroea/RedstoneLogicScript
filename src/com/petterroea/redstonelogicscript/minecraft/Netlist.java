@@ -32,6 +32,7 @@ public class Netlist {
 	}
 
 	public void buildNet(ModuleContainer moduleContainer) {
+		System.out.println("Building netlist...");
 		double longestDistance = 0.0;
 		String longestp1;
 		String longestp2;
@@ -41,6 +42,7 @@ public class Netlist {
 		while(connectedPoints.size() < points.size()) {
 			if(points.size() - connectedPoints.size() == 1) {
 				//For this point, pathfind 
+				return;
 			} else {
 				for(String s : points) {
 					if(connectedPoints.contains(s))
@@ -142,7 +144,7 @@ public class Netlist {
 			netlistPathfindMap[matrixAjusted.getX()][matrixAjusted.getY()][matrixAjusted.getZ()] = -1;
 		} else {
 			short lowestPoint = Short.MAX_VALUE;
-			lowestPoint = netlistPathfindMap[point.getX()][point.getY()][point.getZ()] < lowestPoint
+			//lowestPoint = netlistPathfindMap[point.getX()][point.getY()][point.getZ()] < lowestPoint
 		}
 	}
 }
