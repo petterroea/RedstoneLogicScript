@@ -1,4 +1,4 @@
-package com.petterroea.redstonelogicscript.compiler.elements;
+package com.petterroea.redstonelogicscript.compiler;
 
 public class ModuleExpression {
 	private String leftSide;

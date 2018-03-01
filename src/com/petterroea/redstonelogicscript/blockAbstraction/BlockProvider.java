@@ -1,4 +1,4 @@
-package com.petterroea.redstonelogicscript.minecraft;
+package com.petterroea.redstonelogicscript.blockAbstraction;
 
 import com.petterroea.redstonelogicscript.utils.Rectangle;
 import com.petterroea.redstonelogicscript.utils.IntegerVector3;

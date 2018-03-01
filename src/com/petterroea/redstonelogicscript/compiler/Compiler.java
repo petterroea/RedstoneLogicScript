@@ -12,7 +12,8 @@ import javax.management.RuntimeErrorException;
 import com.petterroea.redstonelogicscript.compiler.CompilerSettings.CompilerMode;
 import com.petterroea.redstonelogicscript.compiler.elements.Module;
 import com.petterroea.redstonelogicscript.compiler.elements.ModuleParser;
-import com.petterroea.redstonelogicscript.minecraft.ModuleContainer;
+import com.petterroea.redstonelogicscript.blockAbstraction.ModuleContainer;
+import com.petterroea.redstonelogicscript.utils.Logger;
 
 public class Compiler {
 	
@@ -29,7 +30,7 @@ public class Compiler {
 	}
 	
 	public void parseFile(String filename, boolean isMainFile) {
-		System.out.println("Parsing " + filename);
+		Logger.log(this, "Parsing " + filename);
 		
 		File file = settings.findLibraryInIncludePath(filename);
 		if(file == null) {
@@ -61,8 +62,7 @@ public class Compiler {
 						throw new CompilerException("Unknown module flag " + flag);
 					}
 					
-					if(settings.getVerboseFlag())
-						System.out.println("Module " + moduleName + " is main module");
+					Logger.logVerbose(this, "Module " + moduleName + " is main module");
 					
 					isMain = true;
 				}
@@ -82,11 +82,10 @@ public class Compiler {
 				String name = cursor.readString();
 				cursor.expectChar('"');
 				if(!includedFiles.contains(name)) {
-					System.out.println("Importing " + name);
+					Logger.log(this, "Importing " + name);
 					parseFile(name, false);
 				} else {
-					if(settings.getVerboseFlag())
-						System.out.println("Skipping already imported file " + name);
+					Logger.logVerbose(this, "Skipping already imported file " + name);
 				}
 				cursor.skipSpacesAndNewlines();
 				cursor.expectChar(';');
@@ -183,13 +182,13 @@ public class Compiler {
 			throw new CompilerException("No main module defined", "<No file>", 0);
 		}
 		ModuleContainer world = new ModuleContainer(CompilerState.state.getInitModule());
-		System.out.println("Finished parsing and validation in " + (System.currentTimeMillis() - startTime) + "ms.");
-		System.out.println("Compiler contains " + compiler.getModuleList().length + " Modules");
+		System.out.println("UPDATE> Finished parsing and validation in " + (System.currentTimeMillis() - startTime) + "ms.");
+		System.out.println("UPDATE> Compiler contains " + compiler.getModuleList().length + " Modules");
 		
 		long generationStartTime = System.currentTimeMillis();
 		world.generateStructures(compiler);
 		
-		System.out.println("Finished building structures in " + (System.currentTimeMillis() - generationStartTime) + "ms.");
+		System.out.println("UPDATE> Finished building structures in " + (System.currentTimeMillis() - generationStartTime) + "ms.");
 		
 		
 	}

@@ -1,12 +1,13 @@
 package com.petterroea.redstonelogicscript.compiler.elements;
 
+import com.petterroea.redstonelogicscript.blockAbstraction.Model;
 import com.petterroea.redstonelogicscript.compiler.CompilerException;
-import com.petterroea.redstonelogicscript.compiler.CompilerSettings;
 import com.petterroea.redstonelogicscript.compiler.CompilerState;
+import com.petterroea.redstonelogicscript.compiler.ModuleExpression;
 import com.petterroea.redstonelogicscript.compiler.StringCursor;
 import com.petterroea.redstonelogicscript.compiler.elements.ConnectionPoint.ConnectionPointType;
-import com.petterroea.redstonelogicscript.minecraft.Model;
 import com.petterroea.redstonelogicscript.utils.IntegerVector3;
+import com.petterroea.redstonelogicscript.utils.Logger;
 
 public class ModuleParser {
 	public static Module parseModule(StringCursor cursor, String moduleName) {
@@ -46,14 +47,7 @@ public class ModuleParser {
 				module.addConnectionPoint(name, cp);
 				break;
 			case "bidirectional":
-				cursor.expectChar(' ');
-				
-				name = cursor.readUntilNotAlphanumeretic();
-				cp = new ConnectionPoint(name, ConnectionPointType.BIDIRECTIONAL, module);
-				module.addConnectionPoint(name, cp);
-				
-				cursor.expectChar(';');
-				break;
+				throw new CompilerException("bidirectional connections are not supported");
 			case "internal":
 				cursor.expectChar(' ');
 				
@@ -85,8 +79,7 @@ public class ModuleParser {
 				String result = cursor.readUntilNotAlphanumeretic();
 				cursor.expectChar(';');
 				
-				if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					System.out.println("Registered operator " + leftSide + " " + op + " " + rightSide + " -> " + result);
+				Logger.logVerbose(module, "Registered operator " + leftSide + " " + op + " " + rightSide + " -> " + result);
 				
 				OperatorModule opModule = new OperatorModule(op, module, leftSide, rightSide, result, CompilerState.state.getCurrentFile(), CompilerState.state.getLineNumber());
 				module.operators.add(opModule);
@@ -101,16 +94,14 @@ public class ModuleParser {
 				cursor.skipSpacesAndNewlines();
 				rightSide = cursor.readUntil(';');
 				cursor.readChar();
-				if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					System.out.println("Connecting " + leftSide + " to " + rightSide);
+				Logger.logVerbose(module, "Connecting " + leftSide + " to " + rightSide);
 				ModuleExpression exp = new ModuleExpression(leftSide, rightSide, CompilerState.state.getLineNumber(), CompilerState.state.getCurrentFile());
 				module.addExpression(exp);
 			}
 			cursor.skipSpacesAndNewlines();
 		}
 		cursor.readChar();
-		if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			System.out.println("Done parsing module " + module.getName());
+		Logger.logVerbose(module, "Done parsing module " + module.getName());
 		return module;
 	}
 	
@@ -173,8 +164,7 @@ public class ModuleParser {
 				}
 				cursor.readChar();
 				modelPayload = cursor.readUntil(']');
-				if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					System.out.println("Model payload for model " + modelName + ": " + modelPayload);
+				Logger.logVerbose(module, "Model payload for model " + modelName + ": " + modelPayload);
 				
 				String[] floors = modelPayload.split(",");
 				
@@ -215,8 +205,7 @@ public class ModuleParser {
 			cursor.skipSpacesAndNewlines();
 		}
 		cursor.readChar();
-		if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			System.out.println("Done parsing model " + modelName);
+		Logger.logVerbose(module, "Done parsing model " + modelName);
 		return model;
 	}
 }

@@ -1,9 +1,10 @@
-package com.petterroea.redstonelogicscript.minecraft;
+package com.petterroea.redstonelogicscript.blockAbstraction;
 
 import java.util.HashMap;
 
 import com.petterroea.redstonelogicscript.compiler.CompilerException;
 import com.petterroea.redstonelogicscript.compiler.CompilerSettings;
+import com.petterroea.redstonelogicscript.minecraft.Block;
 import com.petterroea.redstonelogicscript.utils.IntegerVector3;
 
 public class Model extends BlockContainer{

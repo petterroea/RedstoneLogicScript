@@ -1,4 +1,4 @@
-package com.petterroea.redstonelogicscript.minecraft;
+package com.petterroea.redstonelogicscript.blockAbstraction;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -10,12 +10,14 @@ import java.util.regex.Pattern;
 import com.petterroea.redstonelogicscript.compiler.CompilerException;
 import com.petterroea.redstonelogicscript.compiler.CompilerSettings;
 import com.petterroea.redstonelogicscript.compiler.CompilerState;
+import com.petterroea.redstonelogicscript.compiler.ModuleExpression;
+import com.petterroea.redstonelogicscript.compiler.elements.ConnectionPoint.ConnectionPointType;
 import com.petterroea.redstonelogicscript.compiler.elements.Module;
-import com.petterroea.redstonelogicscript.compiler.elements.ModuleExpression;
 import com.petterroea.redstonelogicscript.compiler.elements.OperatorModule;
 import com.petterroea.redstonelogicscript.utils.Rectangle;
 import com.petterroea.redstonelogicscript.utils.DoubleVector3;
 import com.petterroea.redstonelogicscript.utils.IntegerVector3;
+import com.petterroea.redstonelogicscript.utils.Logger;
 import com.petterroea.util.MiscUtils;
 
 public class ModuleContainer extends BlockContainer {
@@ -50,15 +52,13 @@ public class ModuleContainer extends BlockContainer {
 		        
 		        this.connectionPoints.put((String)pair.getKey(), (IntegerVector3)pair.getValue());
 		    }
-		    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-		    	System.out.println("Finished adding model module " + this.module.getName() + ", with " + connectionPoints.size() + " connections.");
+		    Logger.logVerbose(module, "Finished adding model module " + this.module.getName() + ", with " + connectionPoints.size() + " connections.");
 		} else {
 			//Put internal values in their internals and netlists
 			for(String name : module.getInternalValues().keySet()) {
 				String moduleType = module.getInternalValues().get(name);
 				if(!moduleType.equals("point")) {
-					if(CompilerSettings.settingsSingleton.getVerboseFlag())
-						System.out.println("Creating internal of type " + moduleType);
+					Logger.logVerbose(module, "Creating internal of type " + moduleType);
 					
 					ModuleContainer container = new ModuleContainer(compiler.getModule(moduleType));
 					container.generateStructures(compiler);
@@ -71,8 +71,7 @@ public class ModuleContainer extends BlockContainer {
 				}
 			}
 			
-			if(CompilerSettings.settingsSingleton.getVerboseFlag())
-				System.out.println("Building netlist for " + module.getName());
+			Logger.logVerbose(module, ":Building netlist for " + module.getName());
 			//Build netlist
 			for(ModuleExpression exp : module.getExpressions()) {
 				String rightSide = exp.getRightSide();
@@ -81,8 +80,7 @@ public class ModuleContainer extends BlockContainer {
 				connectPoints(leftSide, rightSide, compiler);
 			}
 			
-			if(CompilerSettings.settingsSingleton.getVerboseFlag())
-				System.out.println("Netlist for " + module.getName() + " has " + netlists.size() + " entries.");
+			Logger.logVerbose(module, ":Netlist for " + module.getName() + " has " + netlists.size() + " entries.");
 			
 			LinkedList<ModuleContainer> placedModules = new LinkedList<ModuleContainer>();
 			int modulePadding = 5;
@@ -120,8 +118,7 @@ public class ModuleContainer extends BlockContainer {
 					        connectionPoints.put(currentModuleName + "." + (String)pair.getKey(), (IntegerVector3)pair.getValue());
 					        //it.remove(); // avoids a ConcurrentModificationException
 					    }
-					    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-							System.out.println("Added first module");
+					    Logger.logVerbose(module, "Added first module");
 				    	continue;
 				    }
 				    
@@ -197,8 +194,7 @@ public class ModuleContainer extends BlockContainer {
 				    }
 				   
 				    
-				    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-						System.out.println("Found average placement position for module " + currentModuleName + " in " + module.getName() + ": " + position.toString() + ", direction " + direction.toString());
+				    Logger.logVerbose(module, "Found average placement position for module " + currentModuleName + " in " + module.getName() + ": " + position.toString() + ", direction " + direction.toString());
 				    
 				    currentModule.setPosition(position.toIntegerVector());
 				    //Next, we move as far as we can before colliding
@@ -206,24 +202,19 @@ public class ModuleContainer extends BlockContainer {
 				    	while(!this.doesCollide(currentModule, getPosition())) {
 					    	currentModule.translate(direction.toIntegerVector());
 					    }
-				    	if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					    	System.out.println("Finished snuggling with closest module");
+				    	Logger.logVerbose(module, "Finished snuggling with closest module");
 				    	
 				    	currentModule.translate(direction.multiply(-1*modulePadding).toIntegerVector());
 					    
-					    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					    	System.out.println("Translated module for current padding level " + modulePadding + ", position " + currentModule.getPosition().toString());
+				    	Logger.logVerbose(module, "Translated module for current padding level " + modulePadding + ", position " + currentModule.getPosition().toString());
 					    
 					    while(this.doesCollide(currentModule, getPosition())) {
-					    	if(CompilerSettings.settingsSingleton.getVerboseFlag())
-						    	System.out.println("The padding translation put us in a place which is occupated, translating further: " + currentModule.getPosition().toString());
+					    	Logger.logVerbose(module, "The padding translation put us in a place which is occupated, translating further: " + currentModule.getPosition().toString());
 					    	IntegerVector3 translationDir = direction.multiply(-1*modulePadding).roundUpIntegerVector();
-					    	if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					    		System.out.println("Translating in direction " + translationDir.toString());
+					    	Logger.logVerbose(module, "Translating in direction " + translationDir.toString());
 					    	currentModule.translate(translationDir);
 					    }
-					    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-					    	System.out.println("Finished finding a position");
+					    Logger.logVerbose(module, "Finished finding a position");
 				    } else {
 				    	//The net is new, so we just find a position that is legal
 				    	while(this.doesCollide(currentModule, getPosition())) {
@@ -254,8 +245,7 @@ public class ModuleContainer extends BlockContainer {
 				    this.blockList.add(currentModule);
 				    placedModules.add(currentModule);
 				    
-				    if(CompilerSettings.settingsSingleton.getVerboseFlag())
-				    	System.out.println("Adding module " + currentModuleName + " at position " + currentModule.getPosition().toString());
+				    Logger.logVerbose(module, "Adding module " + currentModuleName + " at position " + currentModule.getPosition().toString());
 				    
 				    it = currentModule.getConnectionPoints().entrySet().iterator();
 				    while (it.hasNext()) {
@@ -300,8 +290,7 @@ public class ModuleContainer extends BlockContainer {
 			*/
 		}
 		this.buildBoundingBox();
-		if(CompilerSettings.settingsSingleton.getVerboseFlag())
-			System.out.println("Bounding box for " + module.getName() + " built: " + getBoundingBox().toString());
+		Logger.logVerbose(module, "Bounding box for " + module.getName() + " built: " + getBoundingBox().toString());
 	}
 	
 	private HashMap<String, IntegerVector3> getConnectionPoints() {
@@ -372,6 +361,10 @@ public class ModuleContainer extends BlockContainer {
 		byte[] data = new byte[16];
 		random.nextBytes(data);
 		return MiscUtils.getMd5(data);
+	}
+	
+	public ConnectionPointType getConenctionType(String name) {
+		
 	}
 	
 	public OperatorModule getOperator(String sideArgument) {

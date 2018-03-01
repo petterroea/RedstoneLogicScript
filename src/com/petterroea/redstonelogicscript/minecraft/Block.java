@@ -1,5 +1,6 @@
 package com.petterroea.redstonelogicscript.minecraft;
 
+import com.petterroea.redstonelogicscript.blockAbstraction.BlockProvider;
 import com.petterroea.redstonelogicscript.compiler.CompilerException;
 import com.petterroea.redstonelogicscript.utils.Rectangle;
 import com.petterroea.redstonelogicscript.utils.IntegerVector3;

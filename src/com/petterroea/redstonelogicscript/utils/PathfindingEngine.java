@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Random;
 
+import com.petterroea.redstonelogicscript.blockAbstraction.BlockProvider;
 import com.petterroea.redstonelogicscript.compiler.CompilerException;
-import com.petterroea.redstonelogicscript.minecraft.BlockProvider;
 
 public class PathfindingEngine {
 	
@@ -55,31 +55,25 @@ public class PathfindingEngine {
 	}
 	
 	public IntegerVector3[] getPath(IntegerVector3 start, IntegerVector3 end) {
-		LinkedList<IntegerVector3> pointQueue = new LinkedList<IntegerVector3>();
-		if(!isWithinBounds(start)) {
-			throw new CompilerException("Tried to pathfind from a point outside bounds, up the bounds maybe?");
-		}
-		
 		if(!isWithinBounds(end)) {
 			throw new CompilerException("Tried to pathfind to a point outside bounds, up the bounds maybe?");
 		}
 		
-		setScoreAtPoint(start, 1);
-		doPoint(pointQueue, start);
+		SingleEndProvider endProvider = new SingleEndProvider(end);
+		return getPath(start, endProvider);
 		
-		//Build map
-		while(pointQueue.size() != 0) {
-			pointQueue = gridPopulationIteration(pointQueue, end);
-			if(pointQueue == null)
-				break;
+	}
+	
+	public IntegerVector3[] getPath(IntegerVector3 start, ValidEndProvider endHandler) {
+		
+		if(!isWithinBounds(start)) {
+			throw new CompilerException("Tried to pathfind from a point outside bounds, up the bounds maybe?");
 		}
-		if(pointQueue != null) {
-			//Pathfinding failed, let's break
-			return null;
-		}
+		
+		
 		//backwards-iterate through the grid
 		LinkedList<IntegerVector3> path = new LinkedList<IntegerVector3>();
-		IntegerVector3 currPoint = end;
+		IntegerVector3 currPoint = gridPopulationToEnd(start, endHandler);
 		while(currPoint != start) {
 			currPoint = getLowestPoint(currPoint);
 			
@@ -119,20 +113,29 @@ public class PathfindingEngine {
 		IntegerVector3 matrixPos = p.add(new IntegerVector3(sx, sy, sz));
 		pathfindingGrid[matrixPos.getX()][matrixPos.getY()][matrixPos.getZ()] = score;
 	}
-
-	/**
-	 * Returns null if the end target is reached, a LinkedList of integerVectors to come if not.
+	
+	/*
+	 * Returns null if a path wasn't found
 	 */
-	private LinkedList<IntegerVector3> gridPopulationIteration(LinkedList<IntegerVector3> pointQueue, IntegerVector3 end) {
-		LinkedList<IntegerVector3> newList = new LinkedList<IntegerVector3>();
-		for(IntegerVector3 currentVector : pointQueue) {
-			if(currentVector == end) {
-				return null;
-			} else {
-				doPoint(newList, currentVector);
+	private IntegerVector3 gridPopulationToEnd(IntegerVector3 start, ValidEndProvider end) {
+		LinkedList<IntegerVector3> pointQueue = new LinkedList<IntegerVector3>();
+		
+		setScoreAtPoint(start, 1);
+		doPoint(pointQueue, start);
+		
+		//Build map
+		while(pointQueue.size() != 0) {
+			LinkedList<IntegerVector3> newList = new LinkedList<IntegerVector3>();
+			for(IntegerVector3 currentVector : pointQueue) {
+				if(end.isValidEndPoint(currentVector)) {
+					return currentVector;
+				} else {
+					doPoint(newList, currentVector);
+				}
 			}
+			pointQueue = newList;
 		}
-		return newList;
+		return null;
 	}
 	
 	private void doPoint(LinkedList<IntegerVector3> pointQueue, IntegerVector3 point) {

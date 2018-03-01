@@ -1,6 +1,6 @@
 package com.petterroea.redstonelogicscript.compiler.elements;
 
-import com.petterroea.redstonelogicscript.minecraft.ModuleContainer;
+import com.petterroea.redstonelogicscript.blockAbstraction.ModuleContainer;
 import com.petterroea.redstonelogicscript.utils.IntegerVector3;
 
 public class NetlistPoint {

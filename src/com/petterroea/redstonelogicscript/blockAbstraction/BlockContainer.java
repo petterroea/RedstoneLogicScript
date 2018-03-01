@@ -1,4 +1,4 @@
-package com.petterroea.redstonelogicscript.minecraft;
+package com.petterroea.redstonelogicscript.blockAbstraction;
 
 import java.util.LinkedList;
 
