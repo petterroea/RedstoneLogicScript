@@ -1,4 +1,4 @@
-#The Redstone Logic Script language
+# The Redstone Logic Script language
 
 ## Abstract
 
@@ -82,6 +82,14 @@ An internal can be one of two things
 For internal connection points, the behavior is pretty straight forward: it's a way of connecting a multitude of points together in a very obvious way, and should always be preferred in order to increase readability.
 
 Internal modules are a slightly different story. Internal modules can be seen as modules "hidden from the public". The state of a module is the public-facing results of a network of connected internal modules, which do the actual lifting work. 
+
+Internals are defined like this:
+
+```
+internal <type> <name>;
+```
+
+Where `<type>` is either `point` or the name of another module. `<name>` is the name of the internal point.
 
 ### Operators
 
